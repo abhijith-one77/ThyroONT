@@ -1,0 +1,215 @@
+INITIALIZING
+
+Tmux
+
+cat PBA59540_pass_cdf9a8d4_91ddaf4c_*.fastq.gz > PBA59540_merged.fastq.gz
+
+# integrity check
+gzip -t PBA59540_merged.fastq.gz && echo "Merge successful and file is valid!"
+
+# This will give you the average read length of this 69GB file
+zcat PBA59540_merged.fastq.gz | awk '{if(NR%4==2) {count++; sum+=length($0)}} END {print "Average Read Length: "sum/count}'
+
+Exit
+
+Tmux  
+
+zcat /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_merged.fastq.gz | \
+awk 'BEGIN {OFS="\n"} {header=$0; getline seq; getline sep; getline qual; if (length(seq) >= 1000) print header, seq, sep, qual}' \
+> /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq
+
+
+###Different terminal###
+Watch as the site increases
+watch -n 2 "ls -lh /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq"
+###Different terminal###
+
+
+# compressing the file for analysis
+gzip /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq
+
+Run NanoPlot on the filtered set:
+
+Later
+
+
+Run minimap2 on the filtered set:
+
+#Checking if compression is running properly
+ls -lh /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq.gz
+
+gzip -t /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq.gz
+
+# to check the exit status: should return 0
+echo $?
+
+zcat /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_filtered.fastq.gz | head -n 8
+
+
+# Move to the correct folder
+cd /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/
+
+# Activate your env (if not already active)
+source /rds/projects/d/dixonh-02/PROMSW1736celllineAS/miniconda_env/bin/activate
+
+
+Main code to run minimap2 on the filtered set and align it also:
+minimap2 -t 16 -ax map-ont --MD reference.fasta PBA59540_filtered.fastq.gz | \
+samtools sort -@ 4 -m 2G -T temp_PBA59540 -o PBA59540_aligned_sorted.bam
+
+
+# to make .bai file to add to ensembl
+samtools index PBA59540_aligned_sorted.bam
+
+Run clair3
+
+# I am making a bed that only takes in significant genes for thyroid cancer so that it goes fast
+
+printf "chr1\t114704464\t114716894\tNRAS\n\
+chr1\t17018664\t17054151\tSDHB\n\
+chr2\t29192774\t29921586\tALK\n\
+chr2\t113215997\t113278921\tPAX8\n\
+chr3\t12287368\t12434344\tPPARG\n\
+chr3\t24117153\t24495708\tTHRB\n\
+chr3\t87259404\t87276584\tPOU1F1\n\
+chr3\t179148126\t179240093\tPIK3CA\n\
+chr5\t112707498\t112846239\tAPC\n\
+chr5\t173232109\t173235206\tNKX2-5\n\
+chr5\t177992235\t177996242\tPROP1\n\
+chr6\t150369012\t150405969\tIYD\n\
+chr7\t107660828\t107717809\tSLC26A4\n\
+chr7\t140713327\t140924928\tBRAF\n\
+chr8\t31033810\t31176138\tWRN\n\
+chr8\t132866958\t133134899\tTG\n\
+chr9\t21967752\t21995324\tCDKN2A\n\
+chr9\t22002903\t22009313\tCDKN2B\n\
+chr9\t97853226\t97856717\tFOXE1\n\
+chr10\t43076840\t43130353\tRET\n\
+chr10\t87863625\t87971930\tPTEN\n\
+chr11\t532242\t537287\tHRAS\n\
+chr11\t14966668\t14972351\tCALCA\n\
+chr11\t64803516\t64811294\tMEN1\n\
+chr11\t112086873\t112095794\tSDHD\n\
+chr12\t25204789\t25250936\tKRAS\n\
+chr12\t49018978\t49060794\tKMT2D\n\
+chr12\t63844700\t64162217\tSRGAP1\n\
+chr14\t104769349\t104795748\tAKT1\n\
+chr15\t42942897\t43106038\tUBR1\n\
+chr15\t45092650\t45114172\tDUOX2\n\
+chr15\t45114326\t45118421\tDUOXA2\n\
+chr17\t7661779\t7687550\tTP53\n\
+chr17\t40062193\t40093867\tTHRA\n\
+chr17\t60600193\t60666280\tPPM1D\n\
+chr17\t68413623\t68551316\tPRKAR1A\n\
+chr22\t28687742\t28741834\tCHEK2\n\
+chrX\t44873188\t45112779\tKDM6A\n\
+chrX\t72301646\t72307157\tCITED1\n\
+chrX\t74421493\t74533916\tSLC16A2\n\
+chrX\t131273506\t131289457\tIGSF1\n\
+chrM\t0\t16569\tMitochondrial\n" > /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed
+
+# to check if it works 
+cat -t /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed
+
+# launching clair3
+source /rds/projects/d/dixonh-02/PROMSW1736celllineAS/miniconda_env/bin/activate
+conda activate clair3_env
+
+
+# now the main command
+
+# for the minion files
+run_clair3.sh \
+  --bam_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/minion_files/minion_sorted.bam \
+  --ref_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/reference.fasta \
+  --threads=64 \
+  --platform="ont" \
+  --model_path="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/miniconda_env/envs/clair3_env/bin/models/r941_prom_sup_g5014" \
+  --output=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/newminion_vcf_results \
+  --bed_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed \
+  --enable_phasing
+
+
+# For the the promethion files
+run_clair3.sh \
+  --bam_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_aligned_sorted.bam \
+  --ref_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/reference.fasta \
+  --threads=64 \
+  --platform="ont" \
+  --model_path="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/miniconda_env/envs/clair3_env/bin/models/r941_prom_sup_g5014" \
+  --output=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/newPBA59540_vcf_results \
+  --bed_fn=/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed \
+  --enable_phasing
+
+
+Run sniffles2
+
+/rds/projects/d/dixonh-02/PROMSW1736celllineAS/miniconda_env/bin/sniffles \
+  --input /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_aligned_sorted.bam \
+  --vcf /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_inversion_results.vcf \
+  --threads 32 \
+  --reference /rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/reference.fasta
+
+
+To run mosdepth 
+
+# for minion 
+
+# 1. Define your paths (Verify these are correct for your system)
+BAM="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/minion_files/minion_sorted.bam"
+BED="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed"
+FINAL_DEST="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/"
+TEMP_DIR="/tmp/mosdepth_thyroid_$USER"
+
+# 2. Prepare the environment
+conda activate mosdepth_env
+mkdir -p $TEMP_DIR
+
+# 3. Run Mosdepth (Fast mode -n, targeting your BED file)
+echo "Starting mosdepth analysis on thyroid genes..."
+mosdepth -n -b $BED -t 4 $TEMP_DIR/thyroid_results $BAM
+
+# 4. Copy ONLY the small important result back to your home directory
+cp $TEMP_DIR/thyroid_results.regions.bed.gz $FINAL_DEST
+
+# 5. Clean up the large temporary files to save the node space
+rm -rf $TEMP_DIR
+
+# 6. Display the results immediately
+echo "------------------------------------------------"
+echo "THYROID GENE COVERAGE RESULTS:"
+echo "------------------------------------------------"
+zcat ${FINAL_DEST}thyroid_results.regions.bed.gz | column -t
+
+ # for promethion 
+
+# 1. Define your paths (Verify these are correct for your system)
+BAM="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/PBA59540_aligned_sorted.bam"
+BED="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/thyroid_panel.bed"
+FINAL_DEST="/rds/projects/d/dixonh-02/PROMSW1736celllineAS/fastq_pass/"
+TEMP_DIR="/tmp/mosdepth_thyroid_$USER"
+
+# 2. Prepare the environment
+conda activate mosdepth_env
+mkdir -p $TEMP_DIR
+
+# 3. Run Mosdepth (Fast mode -n, targeting your BED file)
+echo "Starting mosdepth analysis on thyroid genes..."
+mosdepth -n -b $BED -t 4 $TEMP_DIR/promethion_mosresults $BAM
+
+# 4. Copy ONLY the small important result back to your home directory
+cp $TEMP_DIR/promethion_mosresults.regions.bed.gz $FINAL_DEST
+
+# 5. Clean up the large temporary files to save the node space
+rm -rf $TEMP_DIR
+
+# 6. Display the results immediately
+echo "------------------------------------------------"
+echo "THYROID GENE COVERAGE RESULTS:"
+echo "------------------------------------------------"
+zcat ${FINAL_DEST}promethion_mosresults.regions.bed.gz | column -t
+
+
+# combining the two for maftools
+bcftools concat -a promethion.vcf.gz minion.vcf.gz -d all -o combined_calls.vcf
+bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\t%QUAL\t%FILTER\n' combined_calls.vcf > combined_calls.tsv   
